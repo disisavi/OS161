@@ -27,24 +27,56 @@
  * SUCH DAMAGE.
  */
 
-/*
- * Driver code for whale mating problem
- */
+ /*
+  * Driver code for whale mating problem
+  */
 #include <types.h>
 #include <lib.h>
 #include <thread.h>
 #include <test.h>
+#include <synch.h>
 
 #define NMATING 10
+
+static struct semaphore *male_sem;
+static struct semaphore *female_sem;
+static struct semaphore *match_sem;
+static struct lock *match_lock;
+static struct lock *male_lock;
+static struct lock *female_lock;
+
+static
+void 
+init()
+{
+	match_lock = lock_create("Match_lock");
+	male_lock = lock_create("male_lock");
+	female_lock = lock_create("female_lock");
+
+	KASSERT(match_lock != NULL);
+	KASSERT(male_lock != NULL);
+	KASSERT(female_lock != NULL);
+	
+	male_sem = sem_create("male_Sem",0);
+	female_sem = sem_create("female_Sem",0);
+	match_sem = sem_create("Match_Sem",0);
+
+	KASSERT(male_sem != NULL);
+	KASSERT(female_sem != NULL);
+	KASSERT(match_lock != NULL);
+}
 
 static
 void
 male(void *p, unsigned long which)
 {
 	(void)p;
-	kprintf("male whale #%ld starting\n", which);
-
-	// Implement this function
+	kprintf("Male whale #%ld starting\n", which);
+	//Just waiting for the mathcmaker to signal that match has been found...
+	lock_acquire(male_lock);
+	P(male_sem);
+	lock_release(male_lock);
+	kprintf("The male %ld signalled... Mating successfull.\n",which);
 }
 
 static
@@ -53,8 +85,11 @@ female(void *p, unsigned long which)
 {
 	(void)p;
 	kprintf("female whale #%ld starting\n", which);
-
-	// Implement this function
+	//Just waiting for the matchmaker to signal that a match has been foound...
+	lock_acquire(female_lock);
+	P(female_sem);
+	lock_release(female_lock);	
+	kprintf("The female %ld signalled... Mating successfull.\n", which);
 }
 
 static
@@ -63,8 +98,24 @@ matchmaker(void *p, unsigned long which)
 {
 	(void)p;
 	kprintf("matchmaker whale #%ld starting\n", which);
-
-	// Implement this function
+	//critical section
+	lock_acquire(match_lock);
+	bool condition = true;
+	lock_release(match_lock);
+	//checking if there are any semaphores which are in waiting. If yes, it increments its count and then comes out of critical section
+	while(condition)
+	{
+		lock_acquire(match_lock);
+		if(female_sem->sem_count == 0 && male_sem->sem_count == 0)
+		{
+			V(female_sem);
+			V(male_sem);
+			condition = false;
+		}
+		lock_release(match_lock);
+	}
+	
+	kprintf("The matchMaker %ld signalled... Mating successfull.\n", which);
 }
 
 
@@ -73,33 +124,33 @@ int
 whalemating(int nargs, char **args)
 {
 
-	int i, j, err=0;
+	kprintf("\n");
+	int i, j, err = 0;
 
 	(void)nargs;
 	(void)args;
-
+	init();
 	for (i = 0; i < 3; i++) {
 		for (j = 0; j < NMATING; j++) {
-			switch(i) {
-			    case 0:
+			switch (i) {
+			case 0:
 				err = thread_fork("Male Whale Thread",
-						  NULL, male, NULL, j);
+					NULL, male, NULL, j);
 				break;
-			    case 1:
+			case 1:
 				err = thread_fork("Female Whale Thread",
-						  NULL, female, NULL, j);
+					NULL, female, NULL, j);
 				break;
-			    case 2:
+			case 2:
 				err = thread_fork("Matchmaker Whale Thread",
-						  NULL, matchmaker, NULL, j);
+					NULL, matchmaker, NULL, j);
 				break;
 			}
 			if (err) {
 				panic("whalemating: thread_fork failed: %s)\n",
-				      strerror(err));
+					strerror(err));
 			}
 		}
 	}
-
 	return 0;
 }
