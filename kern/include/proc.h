@@ -38,9 +38,21 @@
 
 #include <spinlock.h>
 #include <thread.h> /* required for struct threadarray */
+#include <limits.h>
+#define zombie 0
+#define active 1
+#define childlimit 10
+
 
 struct addrspace;
 struct vnode;
+
+struct lock *pid_gen_lock; /* Lock to generate pid */
+int32_t pid_gen;           /* Counter to generate new process id */
+uint32_t counter;          /* Stores number of active processes */
+
+// TODO: Could define array using array.h
+bool pid_arr[PID_MAX];     /* List of pids assigned */
 
 /*
  * Process structure.
@@ -56,9 +68,28 @@ struct proc {
 	/* VFS */
 	struct vnode *p_cwd;		/* current working directory */
 	struct filetable *p_filetable;	/* table of open files */
-
-	/* add more material here as needed */
+	/* add more material here as needed--> Done */
+	bool status;
+	struct proc* child_list;//child processes
+	struct proc* parent;
+	struct lock *child_lock;
+	struct semaphore* p_sem;
+	pid_t pid; // pid number
+	int returnValue; 
 };
+
+
+// struct proceslist{
+// 	struct proc *procnext;
+// 	struct proc *procprev;
+// 	struct proc *procself;
+// }
+
+// bool processlist_isempty(struct threadlist *tl);
+// void threadlist_addhead(struct threadlist *tl, struct thread *t);
+// void threadlist_addtail(struct threadlist *tl, struct thread *t);
+// struct thread *threadlist_remhead(struct threadlist *tl);
+// struct thread *threadlist_remtail(struct threadlist *tl);
 
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;
@@ -86,6 +117,16 @@ struct addrspace *proc_getas(void);
 
 /* Change the address space of the current process, and return the old one. */
 struct addrspace *proc_setas(struct addrspace *);
+
+
+/* Call once during system startup to allocate data structures */
+void pid_bootstrap(void);
+
+/* Call to retrieve next pid to assign */
+pid_t pid_retrieve(void);
+
+/* Call to reclaim pid */
+int pid_reclaim(pid_t pid);
 
 
 #endif /* _PROC_H_ */

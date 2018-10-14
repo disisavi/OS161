@@ -1,1 +1,7 @@
 *.o
+build/
+defs.mk
+kern/compile/ASST4a/*
+kern/conf/.conftmp
+kern/conf/.conftmp.attach
+kern/conf/.conftmp.files

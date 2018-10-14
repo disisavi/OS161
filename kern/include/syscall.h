@@ -72,5 +72,9 @@ int sys_lseek(int fd, off_t offset, int code, off_t *retval);
 int sys_chdir(const_userptr_t path);
 int sys___getcwd(userptr_t buf, size_t buflen, int *retval);
 
+//new syscalls
+pid_t sys_waitpid(pid_t pid, int *returncode, int flags);
+void sys_exit(int exitcode);
+
 
 #endif /* _SYSCALL_H_ */

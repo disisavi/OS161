@@ -37,6 +37,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
       
         if ((tempHolder+i)->pid == pid)
         {
+            kprintf("Lets see... ");
             childp = (tempHolder+i);
             procfound = true;
             break;
