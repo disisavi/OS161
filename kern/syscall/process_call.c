@@ -32,15 +32,15 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 	}
 
     //lock_acquire(curp->child_lock);
-    for(int i=0;i<childlimit;i++)
+    for(int i=0;i<curp->n_child;i++)
     {
-        if((tempHolder+i) != NULL)
+        if((tempHolder+i) == NULL)
         {
-            kprintf("thats all folks");
+            kprintf("\n No process");
         }
         else if ((tempHolder+i)->pid == pid)
         {
-            kprintf("Lets see... ");
+            kprintf("\nChild Process found %s",(tempHolder+i)->p_name);
             childp = (tempHolder+i);
             procfound = true;
             break;
@@ -52,10 +52,10 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     }
 
     //lock_release(curp->child_lock);
-    if(childp->status == zombie)
+    if(childp->p_status ==P_ZOMBIE)
     {
         //lock_acquire(curp->child_lock);
-        status = &childp->returnValue;
+        *status = childp->returnValue;
         //proc_destroy(childp); //cant be done here. To discuss this tomorrows
         //lock_release(curp->child_lock);
 
@@ -65,8 +65,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
     P(childp->p_sem);
 
     //lock_acquire(curp->child_lock);
-    status = &childp->returnValue;
-    childp->status = zombie;
+    *status = childp->returnValue;
+    childp->p_status = P_ZOMBIE;
     //proc_destroy(childp);
     //lock_release(curp->child_lock);
     return 0;
@@ -78,28 +78,31 @@ void sys_exit(int exitcode)
 {
 
     struct thread* curt = curthread;
-	struct proc* curp = curt->t_proc;
-	struct proc* childp;
+    struct proc* curp = curt->t_proc;
+    //struct proc* childp;
     struct proc *tempHolder;
     tempHolder = curp->child_list;
     lock_acquire(curp->child_lock);
-    for(int i=0;i<childlimit;i++)
+    for(int i=0;i<curp->n_child;i++)
     {
       
         if ((tempHolder+i) != NULL )
         {
-            proc_destroy((tempHolder+i));
-        }
-        else if ((tempHolder+i)->status == zombie)
-        {
-            proc_destroy(tempHolder+i);
+            if ((tempHolder+i)->p_status == P_ZOMBIE)
+            {
+                proc_destroy(tempHolder+i);
+            }
+            else
+            {
+               (tempHolder+i)->p_status = P_ORPHAN; 
+            }
         }
     }
     lock_release(curp->child_lock);
 
 
     curp->returnValue = exitcode;
-    V(childp->p_sem);
+    V(curp->p_sem);
 
 
 }

@@ -39,8 +39,7 @@
 #include <spinlock.h>
 #include <thread.h> /* required for struct threadarray */
 #include <limits.h>
-#define zombie 0
-#define active 1
+
 #define childlimit 10
 
 
@@ -53,6 +52,14 @@ uint32_t counter;          /* Stores number of active processes */
 
 // TODO: Could define array using array.h
 bool pid_arr[PID_MAX];     /* List of pids assigned */
+//States process can be in
+
+typedef enum {
+	P_READY,	/* ready to run */
+	P_ORPHAN,	/* sleeping */
+	P_ZOMBIE,	/* zombie; exited but not yet deleted */
+} processstate_t;
+
 
 /*
  * Process structure.
@@ -69,8 +76,9 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 	struct filetable *p_filetable;	/* table of open files */
 	/* add more material here as needed--> Done */
-	bool status;
+	processstate_t p_status;
 	struct proc* child_list;//child processes
+	int n_child;
 	struct proc* parent;
 	struct lock *child_lock;
 	struct semaphore* p_sem;
