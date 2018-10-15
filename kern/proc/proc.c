@@ -51,7 +51,7 @@
 #include <vnode.h>
 #include <filetable.h>
 #include <synch.h>
-#include <pid.h>
+//#include <pid.h>
 
 /*
  * The process for the kernel; this holds all the kernel-only threads.

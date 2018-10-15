@@ -31,11 +31,14 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 		return EINVAL;
 	}
 
-    lock_acquire(curp->child_lock);
+    //lock_acquire(curp->child_lock);
     for(int i=0;i<childlimit;i++)
     {
-      
-        if ((tempHolder+i)->pid == pid)
+        if((tempHolder+i) != NULL)
+        {
+            kprintf("thats all folks");
+        }
+        else if ((tempHolder+i)->pid == pid)
         {
             kprintf("Lets see... ");
             childp = (tempHolder+i);
@@ -48,24 +51,24 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
         return ECHILD;
     }
 
-    lock_release(curp->child_lock);
+    //lock_release(curp->child_lock);
     if(childp->status == zombie)
     {
-        lock_acquire(curp->child_lock);
+        //lock_acquire(curp->child_lock);
         status = &childp->returnValue;
         //proc_destroy(childp); //cant be done here. To discuss this tomorrows
-        lock_release(curp->child_lock);
+        //lock_release(curp->child_lock);
 
         return 0;
     }
 
     P(childp->p_sem);
 
-    lock_acquire(curp->child_lock);
+    //lock_acquire(curp->child_lock);
     status = &childp->returnValue;
     childp->status = zombie;
     //proc_destroy(childp);
-    lock_release(curp->child_lock);
+    //lock_release(curp->child_lock);
     return 0;
 
 }
