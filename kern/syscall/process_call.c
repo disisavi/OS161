@@ -103,6 +103,7 @@ void sys_exit(int exitcode)
 
     curp->returnValue = exitcode;
     V(curp->p_sem);
+    thread_exit();
 
 
 }
