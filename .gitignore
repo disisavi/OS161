@@ -6,3 +6,4 @@ kern/conf/.conftmp
 kern/conf/.conftmp.attach
 kern/conf/.conftmp.files
 *.swp
+.vscode/
