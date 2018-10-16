@@ -39,8 +39,8 @@
 #include <spinlock.h>
 #include <thread.h> /* required for struct threadarray */
 #include <limits.h>
-
-#define childlimit 10
+#include <proclist.h>
+#define MAX_CHILDREN 10
 
 
 struct addrspace;
@@ -77,12 +77,14 @@ struct proc {
 	struct filetable *p_filetable;	/* table of open files */
 	/* add more material here as needed--> Done */
 	processstate_t p_status;
-	struct proc* child_list;//child processes
-	int n_child;
+	pid_t pid; // pid number
+	struct proclistnode p_listnode; /* process as a list node */
+    struct proclist p_child;//child processes
+	int pl_count;
 	struct proc* parent;
 	struct lock *child_lock;
 	struct semaphore* p_sem;
-	pid_t pid; // pid number
+	
 	int returnValue; 
 };
 
@@ -125,16 +127,5 @@ struct addrspace *proc_getas(void);
 
 /* Change the address space of the current process, and return the old one. */
 struct addrspace *proc_setas(struct addrspace *);
-
-
-/* Call once during system startup to allocate data structures */
-void pid_bootstrap(void);
-
-/* Call to retrieve next pid to assign */
-pid_t pid_retrieve(void);
-
-/* Call to reclaim pid */
-int pid_reclaim(pid_t pid);
-
 
 #endif /* _PROC_H_ */
