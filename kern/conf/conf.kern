@@ -330,6 +330,8 @@ file      thread/threadlist.c
 # Process system
 #
 
+file 	  proc/pid.c
+file      proc/proclist.c
 file      proc/proc.c
 
 #
@@ -379,6 +381,7 @@ file      syscall/openfile.c
 file      syscall/runprogram.c
 file      syscall/file_syscalls.c
 file      syscall/time_syscalls.c
+file      syscall/process_call.c
 
 #
 # Startup and initialization

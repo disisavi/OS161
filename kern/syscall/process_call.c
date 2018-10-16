@@ -26,7 +26,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 	struct proc* childp;
 	bool procfound = false;
 	int counter = 0;
-		struct proclistnode plist_node;
+	struct proclistnode plist_node;
 
 	if(options != 0)
 	{

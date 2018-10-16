@@ -408,19 +408,4 @@ proc_setas(struct addrspace *newas)
 	spinlock_release(&proc->p_lock);
 	return oldas;
 }
-void
-pid_bootstrap(void)
-{
-        counter  = 0;
-        pid_gen  = PID_MIN;
 
-        pid_gen_lock = lock_create("pid_gen_lock");
-        if (pid_gen_lock == NULL) {
-                panic("lock_create for counter_lock failed\n");
-        }
-
-        for (int i=0; i<PID_MAX-2; i++) {
-                pid_arr[i] = 0;
-        }
-
-}
