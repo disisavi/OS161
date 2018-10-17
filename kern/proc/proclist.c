@@ -120,7 +120,7 @@ proclist_removenode(struct proclistnode *pln)
         pln->pln_next = NULL;
 }
 
-void
+void    
 proclist_addhead(struct proclist *pl, struct proc *p)
 {
         DEBUGASSERT(pl != NULL);

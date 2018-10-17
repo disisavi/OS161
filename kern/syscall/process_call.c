@@ -158,7 +158,7 @@ sys_fork(struct trapframe *proc_tf, int *retval)
 	/* Ref to current process */
 	struct proc *proc = curproc;
 
-	if (proc->pl_count <= MAX_CHILDREN) {
+	if (proc->p_child.pl_count <= MAX_CHILDREN) {
 		/* Copy trap frame of current process */
 		struct trapframe *child_tf = kmalloc(sizeof(*proc_tf));
 		if (child_tf == NULL) {

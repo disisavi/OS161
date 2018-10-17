@@ -76,7 +76,8 @@ proc_create(const char *name)
 		kfree(proc);
 		return NULL;
 	}
-
+	proclistnode_init(&proc->p_listnode,&proc);
+	proclist_init(&proc->p_child);
 	threadarray_init(&proc->p_threads);
 	spinlock_init(&proc->p_lock);
 	proc->pid = 1;
@@ -191,7 +192,8 @@ proc_destroy(struct proc *proc)
 		}
 		as_destroy(as);
 	}
-
+	proclistnode_cleanup(&proc->p_listnode);
+	proclist_cleanup(&proc->p_child);
 	threadarray_cleanup(&proc->p_threads);
 	spinlock_cleanup(&proc->p_lock);
 
