@@ -35,6 +35,7 @@
 #define _FILETABLE_H_
 
 #include <limits.h> /* for OPEN_MAX */
+#include <synch.h>
 
 
 /*
@@ -57,6 +58,7 @@
  */
 struct filetable {
 	struct openfile *ft_openfiles[OPEN_MAX];
+        struct lock *ft_locks[OPEN_MAX];
 };
 
 /*
