@@ -26,7 +26,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 	struct proc* childp;
 	bool procfound = false;
 	int counter = 0;
-	struct proclistnode plist_node;
+	struct proclistnode* plist_node;
 
 	if(options != 0)
 	{
@@ -39,31 +39,31 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 		return ECHILD;
 	}
 
-	plist_node = curp->p_child.pl_head;
+	plist_node = curp->p_child.pl_head.pln_next;
 	while(counter <curp->p_child.pl_count)
 	{
-		if (plist_node.pln_self->pid == pid)
+		if (plist_node->pln_self->pid == pid)
 		{
 			procfound = true;
-			childp = plist_node.pln_self;
+			childp = plist_node->pln_self;
 			break;
 		}
-		if(plist_node.pln_next != NULL)
+		if(plist_node->pln_next->pln_self != NULL)
 		{
-			plist_node =*plist_node.pln_next;
+			plist_node = plist_node->pln_next;
 			counter++;
 		}
 		else{
 			break;
 		}
 	}
+	lock_release(curp->child_lock);
 
 	if(!procfound)
 	{
 		return ECHILD;
 	}
 
-	lock_release(curp->child_lock);
 	if(childp->p_status ==P_ZOMBIE)
 	{
 		lock_acquire(curp->child_lock);
@@ -209,7 +209,6 @@ sys_fork(struct trapframe *proc_tf, int *retval)
 		return EMPROC;
 	}
 
-	proc->pl_count = proc->pl_count+1;
 
 	return 0;
 }
