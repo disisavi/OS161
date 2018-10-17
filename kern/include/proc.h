@@ -78,26 +78,12 @@ struct proc {
 	pid_t pid; // pid number
 	struct proclistnode p_listnode; /* process as a list node */
     struct proclist p_child;//child processes
-	int pl_count;
-	struct proc* parent;
-	struct lock *child_lock;
-	struct semaphore* p_sem;
-	
-	int returnValue; 
+	struct proc* parent; //parent
+	struct lock *child_lock; 
+	struct semaphore* p_sem; //for signalling.
+	int returnValue;  // exit code of the process.
 };
 
-
-// struct proceslist{
-// 	struct proc *procnext;
-// 	struct proc *procprev;
-// 	struct proc *procself;
-// }
-
-// bool processlist_isempty(struct threadlist *tl);
-// void threadlist_addhead(struct threadlist *tl, struct thread *t);
-// void threadlist_addtail(struct threadlist *tl, struct thread *t);
-// struct thread *threadlist_remhead(struct threadlist *tl);
-// struct thread *threadlist_remtail(struct threadlist *tl);
 
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;

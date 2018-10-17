@@ -39,26 +39,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 	}
 
 	lock_acquire(curp->child_lock);
-        /*
-	plist_node = curp->p_child.pl_head.pln_next;
-	while(counter <curp->p_child.pl_count)
-	{
-		if (plist_node->pln_self->pid == pid)
-		{
-			procfound = true;
-			childp = plist_node->pln_self;
-			break;
-		}
-		if(plist_node->pln_next->pln_self != NULL)
-		{
-			plist_node = plist_node->pln_next;
-			counter++;
-		}
-		else{
-			break;
-		}
-	}
-        */
+	
         struct proc *itervar;
         PROCLIST_FORALL(itervar, curp->p_child) {
                 if (itervar->pid == pid) {
@@ -85,11 +66,8 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 
 	P(childp->p_sem);
 
-	//lock_acquire(curp->child_lock);
 	*status = childp->returnValue;
-	childp->p_status = P_ZOMBIE;
-	//proc_destroy(childp);
-	//lock_release(curp->child_lock);
+	
 	return 0;
 
 }
@@ -124,7 +102,7 @@ void sys_exit(int exitcode)
 			childp->p_status = P_ORPHAN;
 		}
 	}
-
+	curp->state = P_ZOMBIE;
 	lock_release(curp->child_lock);
 
 
