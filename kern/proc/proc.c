@@ -105,7 +105,6 @@ proc_create(const char *name)
 	}
 	
 	proc->p_sem = sem_create("p_sem",0);
-	proc->pl_count = 0;
 	proc->p_status = P_READY;
 	return proc;
 }

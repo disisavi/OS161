@@ -102,7 +102,7 @@ void sys_exit(int exitcode)
 			childp->p_status = P_ORPHAN;
 		}
 	}
-	curp->state = P_ZOMBIE;
+	curp->p_status = P_ZOMBIE;
 	lock_release(curp->child_lock);
 
 
