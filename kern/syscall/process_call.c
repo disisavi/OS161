@@ -124,7 +124,7 @@ void sys_exit(int exitcode)
 	curp->returnValue = exitcode;
 	V(curp->p_sem);
         
-        proc_remthread(curt);
+       //	proc_remthread(curt);
 	thread_exit();
 
 

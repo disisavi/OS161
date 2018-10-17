@@ -55,10 +55,6 @@ filetable_create(void)
 	/* the table starts empty */
 	for (fd = 0; fd < OPEN_MAX; fd++) {
 		ft->ft_openfiles[fd] = NULL;
-                ft->ft_locks[fd] = lock_create("file_lock");
-                if (ft->ft_locks[fd] == NULL) {
-                        panic("lock_create in filetable failed\n");
-                }
 	}
 
 	return ft;
@@ -79,7 +75,6 @@ filetable_destroy(struct filetable *ft)
 		if (ft->ft_openfiles[fd] != NULL) {
 			openfile_decref(ft->ft_openfiles[fd]);
 			ft->ft_openfiles[fd] = NULL;
-                        lock_destroy(ft->ft_locks[fd]);
 		}
 	}
 	kfree(ft);
@@ -125,7 +120,6 @@ filetable_copy(struct filetable *src, struct filetable **dest_ret)
 			openfile_incref(file);
 		}
 		dest->ft_openfiles[fd] = file;
-                dest->ft_locks[fd] = src->ft_locks[fd];
 	}
 
 	*dest_ret = dest;
@@ -166,9 +160,6 @@ filetable_get(struct filetable *ft, int fd, struct openfile **ret)
 		return EBADF;
 	}
 
-        /* Acquire a lock associated with file for synchronization */
-        lock_acquire(ft->ft_locks[fd]);
-
 	*ret = file;
 	return 0;
 }
@@ -194,9 +185,6 @@ void
 filetable_put(struct filetable *ft, int fd, struct openfile *file)
 {
 	KASSERT(ft->ft_openfiles[fd] == file);
-
-        /* Release lock acquired in filetable_get */
-        lock_release(ft->ft_locks[fd]);
 }
 
 /*
