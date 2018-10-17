@@ -33,14 +33,14 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 		return EINVAL;
 	}
 
-	//lock_acquire(curp->child_lock);
+	lock_acquire(curp->child_lock);
 	if(proclist_isempty(&curp->p_child))
 	{
 		return ECHILD;
 	}
 
 	plist_node = curp->p_child.pl_head;
-	while(counter < curp->pl_count)
+	while(counter <curp->p_child.pl_count)
 	{
 		if (plist_node.pln_self->pid == pid)
 		{
@@ -63,13 +63,13 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 		return ECHILD;
 	}
 
-	//lock_release(curp->child_lock);
+	lock_release(curp->child_lock);
 	if(childp->p_status ==P_ZOMBIE)
 	{
-		//lock_acquire(curp->child_lock);
+		lock_acquire(curp->child_lock);
 		*status = childp->returnValue;
 		//proc_destroy(childp); //cant be done here. To discuss this tomorrows
-		//lock_release(curp->child_lock);
+		lock_release(curp->child_lock);
 
 		return 0;
 	}

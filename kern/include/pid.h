@@ -12,6 +12,7 @@ struct lock *pid_gen_lock; /* Lock to generate pid */
 int32_t pid_gen;           /* Counter to generate new process id */
 uint32_t counter;          /* Stores number of active processes */
 
+bool pid_arr[PID_MAX];
 // TODO: Could define array using array.h
 
 /* Call once during system startup to allocate data structures */
