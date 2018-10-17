@@ -108,14 +108,14 @@ proclist_insertbeforenode(struct proc *p, struct proclistnode *onlist)
  */
 static
 void
-proclist_removenode(struct proclistnode *pln)
+proclist_removenode(struct proclistnode *pln,struct proclist *list)
 {
         DEBUGASSERT(pln != NULL);
         DEBUGASSERT(pln->pln_prev != NULL);
         DEBUGASSERT(pln->pln_next != NULL);
 
-        pln->pln_prev->pln_next = pln->pln_next;
-        pln->pln_next->pln_prev = pln->pln_prev;
+        list->pl_head.pln_next = pln->pln_next;
+        list->pl_head.pln_prev = pln->pln_prev;
         pln->pln_prev = NULL;
         pln->pln_next = NULL;
 }
@@ -152,7 +152,7 @@ proclist_remhead(struct proclist *pl)
                 /* list was empty  */
                 return NULL;
         }
-        proclist_removenode(pln);
+        proclist_removenode(pln,pl);
         DEBUGASSERT(pl->pl_count > 0);
         pl->pl_count--;
         return pln->pln_self;
@@ -174,11 +174,11 @@ proclist_insertbefore(struct proclist *pl,
         pl->pl_count++;
 }
 
-void
-proclist_remove(struct proclist *pl, struct proc *p)
-{
-        proclist_removenode(&p->p_listnode);
-        DEBUGASSERT(pl->pl_count > 0);
-        pl->pl_count--;
-}
+// void
+// proclist_remove(struct proclist *pl, struct proc *p)
+// {
+//         proclist_removenode(&p->p_listnode);
+//         DEBUGASSERT(pl->pl_count > 0);
+//         pl->pl_count--;
+// }
 

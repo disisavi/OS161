@@ -110,7 +110,14 @@ void sys_exit(int exitcode)
 		childp = proclist_remhead(&plistchild);
 		if(childp->p_status == P_ZOMBIE)
 		{
-			proc_destroy(childp);
+			if(!proclist_isempty(&(childp->p_child)))
+			{
+				proc_destroy(childp);
+			}
+			else
+			{
+				childp->p_status = P_ORPHAN;	
+			}
 		}
 		else
 		{
