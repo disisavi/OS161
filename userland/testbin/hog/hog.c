@@ -39,12 +39,14 @@ main(void)
 {
 	volatile int i;
 	volatile int k, l, m;
+	printf("Hello fucking world");
 
 	k = 1283;
 	l = 53;
 	for (i=0; i<15000000; i++) {
 		l = m + k;
 	}
+
 
 	// gcc 4.8 improperly demands this
 	(void)l;

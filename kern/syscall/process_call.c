@@ -25,8 +25,6 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 	struct proc* curp = curt->t_proc;
 	struct proc* childp;
 	bool procfound = false;
-	int counter = 0;
-	struct proclistnode* plist_node;
 
 	if(options != 0)
 	{
@@ -207,4 +205,155 @@ sys_fork(struct trapframe *proc_tf, int *retval)
 
 
 	return 0;
+}
+
+
+/*
+ * Open a file on a selected file descriptor. Takes care of various
+ * minutiae, like the vfs-level open destroying pathnames.
+ */
+static
+int
+placed_open(const char *path, int openflags, int fd)
+{
+	struct openfile *newfile, *oldfile;
+	char mypath[32];
+	int result;
+
+	/*
+	 * The filename comes from the kernel, in fact right in this
+	 * file; assume reasonable length. But make sure we fit.
+	 */
+	KASSERT(strlen(path) < sizeof(mypath));
+	strcpy(mypath, path);
+
+	result = openfile_open(mypath, openflags, 0664, &newfile);
+	if (result) {
+		return result;
+	}
+
+	/* place the file in the filetable in the right slot */
+	filetable_placeat(curproc->p_filetable, newfile, fd, &oldfile);
+
+	/* the table should previously have been empty */
+	KASSERT(oldfile == NULL);
+
+	return 0;
+}
+
+/*
+ * Open the standard file descriptors: stdin, stdout, stderr.
+ *
+ * Note that if we fail part of the way through we can leave the fds
+ * we've already opened in the file table and they'll get cleaned up
+ * by process exit.
+ */
+static
+int
+open_stdfds(const char *inpath, const char *outpath, const char *errpath)
+{
+	int result;
+
+	result = placed_open(inpath, O_RDONLY, STDIN_FILENO);
+	if (result) {
+		return result;
+	}
+
+	result = placed_open(outpath, O_WRONLY, STDOUT_FILENO);
+	if (result) {
+		return result;
+	}
+
+	result = placed_open(errpath, O_WRONLY, STDERR_FILENO);
+	if (result) {
+		return result;
+	}
+
+	return 0;
+}
+
+
+
+int
+sys_execv(char *progname, char **args)
+{
+	struct addrspace *as;
+	struct proc *curp = curproc;
+	struct vnode *v;
+	int result; 
+	vaddr_t entrypoint, stackptr;
+
+	result = vfs_open(progname, O_RDONLY, 0, &v);
+	
+	if (result) {
+		return result;
+	}
+
+	if (curp->p_addrspace) {
+
+		if (curp == curproc) {
+			as = proc_setas(NULL);
+			as_deactivate();
+		}
+		else {
+			as = curp->p_addrspace;
+			curp->p_addrspace = NULL;
+		}
+		as_destroy(as);
+	}
+
+	/* Set up stdin/stdout/stderr if necessary. */
+	if (curp->p_filetable == NULL) {
+		curp->p_filetable = filetable_create();
+		if (curp->p_filetable == NULL) {
+			vfs_close(v);
+			return ENOMEM;
+		}
+
+		result = open_stdfds("con:", "con:", "con:");
+		if (result) {
+			vfs_close(v);
+			return result;
+		}
+	}
+
+	as = as_create();
+	if (as == NULL) {
+		vfs_close(v);
+		return ENOMEM;
+	}
+	
+	/* Switch to it and activate it. */
+	proc_setas(as);
+	as_activate();
+
+	
+	/* Load the executable. */
+	result = load_elf(v, &entrypoint);
+	if (result) {
+		/* p_addrspace will go away when curproc is destroyed */
+		vfs_close(v);
+		return result;
+	}
+
+	
+	/* Done with the file now. */
+	vfs_close(v);
+
+	/* Define the user stack in the address space */
+	result = as_define_stack(as, &stackptr);
+	if (result) {
+		/* p_addrspace will go away when curproc is destroyed */
+		return result;
+	}
+
+	/* Warp to user mode. */
+	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
+			  NULL /*userspace addr of environment*/,
+			  stackptr, entrypoint);
+
+	/* enter_new_process does not return. */
+	panic("enter_new_process returned\n");
+	return EINVAL;
+
 }
