@@ -77,7 +77,7 @@ pid_t sys_waitpid(pid_t pid, int *returncode, int flags);
 void sys_exit(int exitcode);
 int sys_getpid(int *retval);
 int sys_fork(struct trapframe *proc_tf, int *retval);
-int sys_execv(char *progname, char **args);
+int sys_execv(char *pname, char **args);
 
 
 #endif /* _SYSCALL_H_ */

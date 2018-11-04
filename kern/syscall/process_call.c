@@ -18,6 +18,8 @@
 #include <synch.h>
 #include <proclist.h>
 #include <lib.h>
+#include <limits.h>
+#include<copyinout.h>
 
 pid_t sys_waitpid(pid_t pid, int *status, int options)
 {
@@ -37,15 +39,15 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 	}
 
 	lock_acquire(curp->child_lock);
-	
-        struct proc *itervar;
-        PROCLIST_FORALL(itervar, curp->p_child) {
-                if (itervar->pid == pid) {
-                        procfound = true;
-                        childp = itervar;
-                        break;
-                }
-        }
+
+	struct proc *itervar;
+	PROCLIST_FORALL(itervar, curp->p_child) {
+		if (itervar->pid == pid) {
+			procfound = true;
+			childp = itervar;
+			break;
+		}
+	}
 	lock_release(curp->child_lock);
 	if(!procfound)
 	{
@@ -65,7 +67,7 @@ pid_t sys_waitpid(pid_t pid, int *status, int options)
 	P(childp->p_sem);
 
 	*status = childp->returnValue;
-	
+
 	return 0;
 
 }
@@ -106,8 +108,8 @@ void sys_exit(int exitcode)
 
 	curp->returnValue = exitcode;
 	V(curp->p_sem);
-        
-       //	proc_remthread(curt);
+
+	//	proc_remthread(curt);
 	thread_exit();
 
 
@@ -208,83 +210,62 @@ sys_fork(struct trapframe *proc_tf, int *retval)
 }
 
 
-/*
- * Open a file on a selected file descriptor. Takes care of various
- * minutiae, like the vfs-level open destroying pathnames.
- */
-static
-int
-placed_open(const char *path, int openflags, int fd)
-{
-	struct openfile *newfile, *oldfile;
-	char mypath[32];
-	int result;
-
-	/*
-	 * The filename comes from the kernel, in fact right in this
-	 * file; assume reasonable length. But make sure we fit.
-	 */
-	KASSERT(strlen(path) < sizeof(mypath));
-	strcpy(mypath, path);
-
-	result = openfile_open(mypath, openflags, 0664, &newfile);
-	if (result) {
-		return result;
-	}
-
-	/* place the file in the filetable in the right slot */
-	filetable_placeat(curproc->p_filetable, newfile, fd, &oldfile);
-
-	/* the table should previously have been empty */
-	KASSERT(oldfile == NULL);
-
-	return 0;
-}
-
-/*
- * Open the standard file descriptors: stdin, stdout, stderr.
- *
- * Note that if we fail part of the way through we can leave the fds
- * we've already opened in the file table and they'll get cleaned up
- * by process exit.
- */
-static
-int
-open_stdfds(const char *inpath, const char *outpath, const char *errpath)
-{
-	int result;
-
-	result = placed_open(inpath, O_RDONLY, STDIN_FILENO);
-	if (result) {
-		return result;
-	}
-
-	result = placed_open(outpath, O_WRONLY, STDOUT_FILENO);
-	if (result) {
-		return result;
-	}
-
-	result = placed_open(errpath, O_WRONLY, STDERR_FILENO);
-	if (result) {
-		return result;
-	}
-
-	return 0;
-}
-
-
-
-int
-sys_execv(char *progname, char **args)
+	int
+sys_execv(char *pname, char **args)
 {
 	struct addrspace *as;
 	struct proc *curp = curproc;
 	struct vnode *v;
 	int result; 
 	vaddr_t entrypoint, stackptr;
+	char* progname = kmalloc(PATH_MAX);
+	char **karg;
+	int argc=0;
+	int arg_size=0;
+	int size_remaining = ARG_MAX;
+	int padding;
+if(args == NULL)
+		return EFAULT;
 
+
+	while(args[argc] != NULL)
+	{
+		argc++;
+	}
+
+		if(pname == NULL)
+		return ENOEXEC;
+
+	karg  = (char **)kmalloc((argc)*sizeof(char*));
+
+	for(int i=0;i<argc;i++)
+	{	
+		arg_size = strlen(args[i]);
+		size_remaining -= arg_size;
+
+		if(size_remaining<0)
+			return E2BIG;
+
+		result = copyinstr((userptr_t)args[i], karg[i], arg_size+1, NULL);
+
+			if(result)
+			{
+				kfree(karg);
+				return result;
+			}
+
+	}
+
+	karg[argc] = NULL;
+
+	result = copyinstr((userptr_t)pname,progname,PATH_MAX,NULL);
+	if(result)
+	{
+		kfree(progname);
+		return result;
+	}
 	result = vfs_open(progname, O_RDONLY, 0, &v);
-	
+
 	if (result) {
 		return result;
 	}
@@ -302,32 +283,18 @@ sys_execv(char *progname, char **args)
 		as_destroy(as);
 	}
 
-	/* Set up stdin/stdout/stderr if necessary. */
-	if (curp->p_filetable == NULL) {
-		curp->p_filetable = filetable_create();
-		if (curp->p_filetable == NULL) {
-			vfs_close(v);
-			return ENOMEM;
-		}
-
-		result = open_stdfds("con:", "con:", "con:");
-		if (result) {
-			vfs_close(v);
-			return result;
-		}
-	}
 
 	as = as_create();
 	if (as == NULL) {
 		vfs_close(v);
 		return ENOMEM;
 	}
-	
+
 	/* Switch to it and activate it. */
 	proc_setas(as);
 	as_activate();
 
-	
+
 	/* Load the executable. */
 	result = load_elf(v, &entrypoint);
 	if (result) {
@@ -336,7 +303,7 @@ sys_execv(char *progname, char **args)
 		return result;
 	}
 
-	
+
 	/* Done with the file now. */
 	vfs_close(v);
 
@@ -347,10 +314,45 @@ sys_execv(char *progname, char **args)
 		return result;
 	}
 
-	/* Warp to user mode. */
-	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
-			  NULL /*userspace addr of environment*/,
-			  stackptr, entrypoint);
+
+
+	// new addr space user stack
+	vaddr_t  uargs[argc];
+	//Add the arguments in the user stack.
+	for(int i= (argc-1);i>=0;i++)
+	{
+		arg_size = strlen(karg[i]);
+		padding = ((arg_size / 4 ) + 1)*4;
+
+		stackptr = stackptr - padding;
+
+		//Do a copyout and check if success/fail
+		result = copyoutstr(karg[i],(userptr_t) stackptr,arg_size+1,NULL);
+		if(result){
+			return result;
+		}
+
+		uargs[i] = stackptr;
+
+	}
+	uargs[argc] = NULL;
+
+	  for(int i = argc-1; i>=0 ; i--){
+		stackptr= stackptr- 4;
+		result = copyout(&(uargs[i]),(userptr_t) stackptr, 4);
+		if(result){
+			return result;
+		}
+   }
+
+
+
+
+
+		/* Warp to user mode. */
+		enter_new_process(argc /*argc*/,(userptr_t) uargs /*userspace addr of argv*/,
+				NULL /*userspace addr of environment*/,
+				stackptr, entrypoint);
 
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
