@@ -6,7 +6,7 @@
 
 
 #include <unistd.h>
-
+static char *hargv[2] = { (char *)"Hello", NULL };
 	int
 main(void)
 {
@@ -15,8 +15,9 @@ main(void)
 	pid_t k = fork();
 	if(k==0)
 	{
+		char args[2];
 		printf("\nInside Child k is ....%ld ",k);	
-		execv("testbin/palin",NULL );
+		execv("testbin/argtest",hargv );
 	}
 	else
 	{

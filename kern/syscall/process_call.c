@@ -1,5 +1,4 @@
 
-//Waitpid
 #include <types.h>
 #include <kern/errno.h>
 #include <cdefs.h>
@@ -220,41 +219,39 @@ sys_execv(char *pname, char **args)
 	vaddr_t entrypoint, stackptr;
 	char* progname = kmalloc(PATH_MAX);
 	char **karg;
+	char *oldstr = kmalloc(PATH_MAX);
+	char* oldptr;
 	int argc=0;
 	int arg_size=0;
-	int size_remaining = ARG_MAX;
+	//int size_remaining = ARG_MAX;
 	int padding;
-if(args == NULL)
-		return EFAULT;
 
-
-	while(args[argc] != NULL)
+	if(args == NULL)
 	{
-		argc++;
+		return EFAULT;
 	}
-
-		if(pname == NULL)
-		return ENOEXEC;
-
-	karg  = (char **)kmalloc((argc)*sizeof(char*));
-
-	for(int i=0;i<argc;i++)
-	{	
-		arg_size = strlen(args[i]);
-		size_remaining -= arg_size;
-
-		if(size_remaining<0)
-			return E2BIG;
-
-		result = copyinstr((userptr_t)args[i], karg[i], arg_size+1, NULL);
-
+	else 
+	{
+		karg  = (char **)kmalloc((argc)*sizeof(char*));
+		while(*(args+argc*sizeof(userptr_t)))
+		{
+			result = copyinstr((userptr_t)(args[argc]),oldstr,PATH_MAX,NULL);
 			if(result)
 			{
-				kfree(karg);
-				return result;
+				return result;	
 			}
+			karg[argc] = kmalloc(strlen(oldstr)*sizeof(char*));
+			karg[argc] = oldstr;
+			argc++;
+		}
 
+			
 	}
+
+	if(pname == NULL)
+		return ENOEXEC;
+
+
 
 	karg[argc] = NULL;
 
@@ -303,7 +300,6 @@ if(args == NULL)
 		return result;
 	}
 
-
 	/* Done with the file now. */
 	vfs_close(v);
 
@@ -314,12 +310,10 @@ if(args == NULL)
 		return result;
 	}
 
-
-
 	// new addr space user stack
 	vaddr_t  uargs[argc];
 	//Add the arguments in the user stack.
-	for(int i= (argc-1);i>=0;i++)
+	for(int i= (argc-1);i>=0;i--)
 	{
 		arg_size = strlen(karg[i]);
 		padding = ((arg_size / 4 ) + 1)*4;
@@ -337,22 +331,18 @@ if(args == NULL)
 	}
 	uargs[argc] = NULL;
 
-	  for(int i = argc-1; i>=0 ; i--){
+	for(int i = argc-1; i>=0 ; i--){
 		stackptr= stackptr- 4;
 		result = copyout(&(uargs[i]),(userptr_t) stackptr, 4);
 		if(result){
 			return result;
 		}
-   }
+	}
 
-
-
-
-
-		/* Warp to user mode. */
-		enter_new_process(argc /*argc*/,(userptr_t) uargs /*userspace addr of argv*/,
-				NULL /*userspace addr of environment*/,
-				stackptr, entrypoint);
+	/* Warp to user mode. */
+	enter_new_process(argc /*argc*/,(userptr_t) uargs /*userspace addr of argv*/,
+			NULL /*userspace addr of environment*/,
+			stackptr, entrypoint);
 
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
