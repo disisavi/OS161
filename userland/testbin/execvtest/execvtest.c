@@ -6,7 +6,7 @@
 
 
 #include <unistd.h>
-static char *hargv[2] = { (char *)"Hello", NULL };
+static char *hargv[4] = { (char *)"Hello","Is there","Anybody", NULL };
 	int
 main(void)
 {

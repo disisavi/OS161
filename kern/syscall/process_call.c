@@ -313,13 +313,13 @@ sys_execv(char *pname, char **args)
 	// new addr space user stack
 	vaddr_t  uargs[argc];
 	//Add the arguments in the user stack.
-	for(int i= (argc-1);i>=0;i--)
+	for(int i=argc-1;i>=0;i--)
 	{
-		arg_size = strlen(karg[i]);
-		padding = ((arg_size / 4 ) + 1)*4;
+		arg_size = strlen(karg[i]) + 1;
+//		padding = ((arg_size / 4 ) + 1)*4;
 
-		stackptr = stackptr - padding;
-
+		stackptr = stackptr - arg_size;
+		
 		//Do a copyout and check if success/fail
 		result = copyoutstr(karg[i],(userptr_t) stackptr,arg_size+1,NULL);
 		if(result){
@@ -329,9 +329,19 @@ sys_execv(char *pname, char **args)
 		uargs[i] = stackptr;
 
 	}
-	uargs[argc] = NULL;
+//	stackptr-=1;
+//	result = copyoutstr(karg[argc],(userptr_t) stackptr,1,NULL);
+	
 
-	for(int i = argc-1; i>=0 ; i--){
+	uargs[argc] = NULL; 
+	int mod = stackptr%4;
+
+	if(mod)
+	{
+		stackptr-=mod;
+	}
+ 
+	for(int i = argc; i>=0 ; i--){
 		stackptr= stackptr- 4;
 		result = copyout(&(uargs[i]),(userptr_t) stackptr, 4);
 		if(result){
@@ -340,7 +350,7 @@ sys_execv(char *pname, char **args)
 	}
 
 	/* Warp to user mode. */
-	enter_new_process(argc /*argc*/,(userptr_t) uargs /*userspace addr of argv*/,
+	enter_new_process(argc /*argc*/,(userptr_t)stackptr /*userspace addr of argv*/,
 			NULL /*userspace addr of environment*/,
 			stackptr, entrypoint);
 
