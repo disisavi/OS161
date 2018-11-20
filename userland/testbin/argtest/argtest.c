@@ -46,13 +46,12 @@ main(int argc, char *argv[])
 	printf("argc: %d\n", argc);
 
 	for (i=0; i<=argc; i++) {
-		printf("address is %p\n",&argv[i]);
 		tmp = argv[i];
 		if (tmp==NULL) {
 			tmp = "[NULL]";
 		}
 		printf("argv[%d]: %s\n", i, tmp);
 	}
-
+	printf("All the arguments done");
 	return 0;
 }

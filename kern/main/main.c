@@ -44,6 +44,7 @@
 #include <synch.h>
 #include <vm.h>
 #include <mainbus.h>
+#include<coremap.h>
 #include <vfs.h>
 #include <device.h>
 #include <syscall.h>

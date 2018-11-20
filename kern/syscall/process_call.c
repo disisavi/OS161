@@ -233,15 +233,14 @@ sys_execv(char *pname, char **args)
 	else 
 	{
 		karg  = (char **)kmalloc((argc)*sizeof(char*));
-		while(*(args+argc*sizeof(userptr_t)))
+		while(args[argc]!=NULL)
 		{
-			result = copyinstr((userptr_t)(args[argc]),oldstr,PATH_MAX,NULL);
+			karg[argc] = kmalloc(strlen(args[argc])*sizeof(char*));
+			result = copyinstr((userptr_t)(args[argc]),karg[argc],PATH_MAX,NULL);
 			if(result)
 			{
 				return result;	
 			}
-			karg[argc] = kmalloc(strlen(oldstr)*sizeof(char*));
-			karg[argc] = oldstr;
 			argc++;
 		}
 
