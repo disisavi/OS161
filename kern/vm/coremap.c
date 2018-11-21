@@ -6,14 +6,15 @@
 #include <lib.h>
 #include <vm.h>
 #include <mainbus.h>
-#include<coremap.h>
+#include <coremap.h>
 
 vaddr_t firstfree;   /* first free virtual address; set by start.S */
 
-void coremapmap_bootstrap()
+void coremap_bootstrap()
+{
 	int total_pages = ram_getsize()/PAGE_SIZE;
-	int c_pages_count = sizeof(struct coremap)*total_pages/PAGE_SIZE;
-	if( sizeof(struct coremap)*total_pages%PAGE_SIZE > 0 )
+	int c_pages_count = sizeof(*coremap)*total_pages/PAGE_SIZE;
+	if( sizeof(*coremap)*total_pages%PAGE_SIZE > 0 )
 	{
 		c_pages_count++;
 	}

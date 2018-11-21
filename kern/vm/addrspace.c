@@ -30,6 +30,7 @@
 #include <types.h>
 #include <kern/errno.h>
 #include <lib.h>
+#include <proc.h>
 #include <addrspace.h>
 #include <vm.h>
 
@@ -91,7 +92,7 @@ as_activate(void)
 {
 	struct addrspace *as;
 
-	as = curproc_getas();
+	as = proc_getas();
 	if (as == NULL) {
 		/*
 		 * Kernel thread without an address space; leave the
@@ -136,7 +137,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	(void)as;
 	(void)vaddr;
 	(void)sz;
-	(void)rePadable;
+	(void)readable;
 	(void)writeable;
 	(void)executable;
 	return ENOSYS;

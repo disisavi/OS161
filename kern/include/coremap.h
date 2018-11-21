@@ -3,7 +3,7 @@
  * physical memory 
 */
 #include <machine/vm.h>
-
+#include<spinlock.h>
 //  Page states 
 typedef enum{
 	M_FREE, // The page is free to be loaded
@@ -16,10 +16,10 @@ struct coremap_struct{
 	paddr_t page_adr;
 	struct spinlock page_lock;
 	page_state p_state;
-} coremap;
+} *coremap;
 
 
-void coremap_bootsrap(void);
+void coremap_bootstrap(void);
 void coremap_allocate(void);
 void coremap_deallocate(void);
 
