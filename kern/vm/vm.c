@@ -11,6 +11,7 @@
 #include <mips/tlb.h>
 #include <addrspace.h>
 #include <vm.h>
+#include <coremap.h>
 
 #define DUMBVM_STACKPAGES    18
 
@@ -46,7 +47,7 @@ getppages(unsigned long npages)
 
 	spinlock_acquire(&stealmem_lock);
 
-	addr = ram_stealmem(npages);
+	addr = coremap_allocatenextn(npages);
 
 	spinlock_release(&stealmem_lock);
 	return addr;

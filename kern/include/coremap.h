@@ -18,8 +18,12 @@ struct coremap_struct{
 	page_state p_state;
 } *coremap;
 
+uint32_t page_count;
+struct spinlock coremap_lock;
 
 void coremap_bootstrap(void);
-void coremap_allocate(void);
-void coremap_deallocate(void);
+paddr_t coremap_allocatenextn(int no);
+uint32_t coremap_deallocatenextn(void); // discuss whether we need this...
+uint32_t coremap_getnextfree(int no); // here n is the number of consicutive pages we want free. If we want only one free, we can just put n = 1;
+
 
