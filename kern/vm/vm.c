@@ -115,8 +115,11 @@ alloc_kpages(unsigned npages)
 void
 free_kpages(vaddr_t addr)
 {
-	/* nothing - leak the memory. */
-
-	(void)addr;
+	uint32_t page_number = (addr - MIPS_KSEG0)/PAGE_SIZE;
+	if((addr - MIPS_KSEG0)%PAGE_SIZE > 0)
+	{
+		page_number++;
+	}
+	coremap_deallocate(page_number);
 }
 

@@ -105,10 +105,12 @@ uint32_t coremap_getnextfree(int no)
 paddr_t coremap_allocatenextn(int no)
 {
 	int index =  coremap_getnextfree(no);
+	int i,j;
 	if(index>0)
 	{
-		for(int i = index; i<no+index;i++)
+		for(i = index,j = 0; i<no+index;i++,j++)
 		{
+			coremap[i].chunk_size = no-j;
 			coremap[i].p_state = M_USED;
 			spinlock_release(&coremap[i].page_lock);
 		}
@@ -117,3 +119,16 @@ paddr_t coremap_allocatenextn(int no)
 
 	return 0;
 }
+
+void coremap_deallocate(uint32_t page_number)
+{
+	spinlock_acquire(&coremap_lock);
+	uint32_t size = coremap[page_number].chunk_size;
+	for(uint32_t i = page_number; i < size+page_number;i++ )
+	{
+		coremap[i].p_state = M_FREE; 
+		coremap[i].chunk_size = 0;
+	}
+	spinlock_release(&coremap_lock);
+}
+
