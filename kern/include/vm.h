@@ -59,6 +59,6 @@ void free_kpages(vaddr_t addr);
 /* TLB shootdown handling called from interprocessor_interrupt */
 void vm_tlbshootdown_all(void);
 void vm_tlbshootdown(const struct tlbshootdown *);
-
+paddr_t getppages(unsigned long npages);
 
 #endif /* _VM_H_ */

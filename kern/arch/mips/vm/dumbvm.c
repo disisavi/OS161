@@ -247,7 +247,6 @@ as_activate(void)
 {
 	int i, spl;
 	struct addrspace *as;
-
 	as = proc_getas();
 	if (as == NULL) {
 		return;

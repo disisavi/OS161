@@ -92,7 +92,11 @@ uint32_t coremap_getnextfree(int no)
 
 	if(page_found)
 	{	
-		spinlock_acquire(&coremap[i].page_lock);
+		for(int j = i;j<i+no;j++)
+		{
+			spinlock_acquire(&coremap[j].page_lock);
+		}
+
 		spinlock_release(&coremap_lock);
 		return i;
 	}

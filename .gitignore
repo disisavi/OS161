@@ -9,3 +9,4 @@ kern/conf/.conftmp.files
 .vscode/
 *.swn
 *.swo
+*.tar

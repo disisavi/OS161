@@ -12,7 +12,7 @@
 #include <addrspace.h>
 #include <vm.h>
 #include <coremap.h>
-
+#include<machine/thread.h>
 #define DUMBVM_STACKPAGES    18
 
 /*
@@ -21,26 +21,25 @@
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 
 
-void
+	void
 vm_bootstrap(void)
 {
 	/* Do nothing. */
 }
-void
+	void
 vm_tlbshootdown_all(void)
 {
 	panic("dumbvm tried to do tlb shootdown?!\n");
 }
 
-void
+	void
 vm_tlbshootdown(const struct tlbshootdown *ts)
 {
 	(void)ts;
 	panic("dumbvm tried to do tlb shootdown?!\n");
 }
 
-static
-paddr_t
+	paddr_t
 getppages(unsigned long npages)
 {
 	paddr_t addr;
@@ -55,9 +54,10 @@ getppages(unsigned long npages)
 
 
 
-int
+	int
 vm_fault(int faulttype, vaddr_t faultaddress)
 {
+
 	vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
 	paddr_t paddr;
 	int i;
@@ -70,14 +70,15 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
 
 	switch (faulttype) {
-	    case VM_FAULT_READONLY:
-		/* We always create pages read-write, so we can't get this */
-		panic("dumbvm: got VM_FAULT_READONLY\n");
-	    case VM_FAULT_READ:
-	    case VM_FAULT_WRITE:
-		break;
-	    default:
-		return EINVAL;
+		case VM_FAULT_READONLY:
+		kprintf("Read Access denied...");
+		curthread->t_machdep.tm_badfaultfunc = NULL;
+		thread_exit();
+		case VM_FAULT_READ:
+		case VM_FAULT_WRITE:
+			break;
+		default:
+			return EINVAL;
 	}
 
 	if (curproc == NULL) {
@@ -97,10 +98,78 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		 */
 		return EFAULT;
 	}
+
+	/* Assert that the address space has been set up properly. */
+	KASSERT(as->as_vbase1 != 0);
+	KASSERT(as->as_pbase1 != 0);
+	KASSERT(as->as_npages1 != 0);
+	KASSERT(as->as_vbase2 != 0);
+	KASSERT(as->as_pbase2 != 0);
+	KASSERT(as->as_npages2 != 0);
+	KASSERT(as->as_stackpbase != 0);
+	KASSERT((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1);
+	KASSERT((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1);
+	KASSERT((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2);
+	KASSERT((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2);
+	KASSERT((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase);
+
+	vbase1 = as->as_vbase1;
+	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
+	vbase2 = as->as_vbase2;
+	vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
+	stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
+	stacktop = USERSTACK;
+
+	if (faultaddress >= vbase1 && faultaddress < vtop1) {
+		paddr = (faultaddress - vbase1) + as->as_pbase1;
+	}
+	else if (faultaddress >= vbase2 && faultaddress < vtop2) {
+		paddr = (faultaddress - vbase2) + as->as_pbase2;
+	}
+	else if (faultaddress >= stackbase && faultaddress < stacktop) {
+		paddr = (faultaddress - stackbase) + as->as_stackpbase;
+	}
+	else {
+		return EFAULT;
+	}
+
+	/* make sure it's page-aligned */
+	KASSERT((paddr & PAGE_FRAME) == paddr);
+
+	/* Disable interrupts on this CPU while frobbing the TLB. */
+	spl = splhigh();
+
+	for (i=0; i<NUM_TLB; i++) {
+		tlb_read(&ehi, &elo, i);
+		if (elo & TLBLO_VALID) {
+			continue;
+		}
+		ehi = faultaddress;
+		elo = paddr | TLBLO_DIRTY| TLBLO_VALID;
+		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+		tlb_write(ehi, elo, i);
+		splx(spl);
+		return 0;
+	}
+
+	int a = tlb_probe(ehi,elo);
+	if(a<0)
+	{
+		tlb_random(ehi,elo);
+	}
+	else 
+	{
+		tlb_write(TLBHI_INVALID(a), TLBLO_INVALID(), a);
+	}	
+
+	//	kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
+	splx(spl);
+	return 0;
+
 }
 
 
-vaddr_t
+	vaddr_t
 alloc_kpages(unsigned npages)
 {
 	paddr_t pa;
@@ -112,7 +181,7 @@ alloc_kpages(unsigned npages)
 }
 
 
-void
+	void
 free_kpages(vaddr_t addr)
 {
 	uint32_t page_number = (addr - MIPS_KSEG0)/PAGE_SIZE;
